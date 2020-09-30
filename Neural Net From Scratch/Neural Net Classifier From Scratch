@@ -1,0 +1,1242 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "coursera": {
+      "course_slug": "neural-networks-deep-learning",
+      "graded_item_id": "XaIWT",
+      "launcher_item_id": "zAgPl"
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.5.2"
+    },
+    "colab": {
+      "name": "Logistic Regression with a Neural Network mindset v4.ipynb",
+      "provenance": [],
+      "collapsed_sections": [],
+      "toc_visible": true
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "UXFxHw7PBx-7",
+        "outputId": "68a6bcd2-e170-4631-840c-5c068719648a",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Mounted at /content/drive\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "fTAQK2N1NELT"
+      },
+      "source": [
+        "import os\n",
+        "myFiles = '/content/drive/My Drive/Colab Notebooks/Logistic Regression as a Neural Network'\n",
+        "os.chdir(myFiles)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "hUxipdQpAUf3"
+      },
+      "source": [
+        "#import relevant libraries\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "import h5py\n",
+        "import scipy\n",
+        "from PIL import Image\n",
+        "from scipy import ndimage\n",
+        "from lr_utils import load_dataset\n",
+        "\n",
+        "%matplotlib inline"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "GiT4ARy5PQeP"
+      },
+      "source": [
+        "# Part 0: Building the Binary Classification Model Using Logistic Regression via Neural Network From Scratch"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "9n8wBDQ0AUf-"
+      },
+      "source": [
+        "# Loading the data (cat/non-cat)\n",
+        "train_set_x_orig, train_set_y, test_set_x_orig, test_set_y, classes = load_dataset()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": true,
+        "id": "nBN_weiAAUgE",
+        "outputId": "14e873c0-c0e2-4ad2-f45c-dc21bcfa52e0",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 153
+        }
+      },
+      "source": [
+        "m_train = train_set_x_orig.shape[0]\n",
+        "m_test = test_set_x_orig.shape[0]\n",
+        "num_px = train_set_x_orig.shape[1]\n",
+        "\n",
+        "print (\"Number of training examples: m_train = \" + str(m_train))\n",
+        "print (\"Number of testing examples: m_test = \" + str(m_test))\n",
+        "print (\"Height/Width of each image: num_px = \" + str(num_px))\n",
+        "print (\"Each image is of size: (\" + str(num_px) + \", \" + str(num_px) + \", 3)\")\n",
+        "print (\"train_set_x shape: \" + str(train_set_x_orig.shape))\n",
+        "print (\"train_set_y shape: \" + str(train_set_y.shape))\n",
+        "print (\"test_set_x shape: \" + str(test_set_x_orig.shape))\n",
+        "print (\"test_set_y shape: \" + str(test_set_y.shape))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Number of training examples: m_train = 209\n",
+            "Number of testing examples: m_test = 50\n",
+            "Height/Width of each image: num_px = 64\n",
+            "Each image is of size: (64, 64, 3)\n",
+            "train_set_x shape: (209, 64, 64, 3)\n",
+            "train_set_y shape: (1, 209)\n",
+            "test_set_x shape: (50, 64, 64, 3)\n",
+            "test_set_y shape: (1, 50)\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "yMHemt71AUgG",
+        "outputId": "75da53f3-83e8-4eda-a4a8-e4d70517f1b5",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 102
+        }
+      },
+      "source": [
+        "# Reshape the training and test examples\n",
+        "\n",
+        "train_set_x_flatten = train_set_x_orig.reshape(train_set_x_orig.shape[0], -1).T\n",
+        "test_set_x_flatten = test_set_x_orig.reshape(test_set_x_orig.shape[0], -1).T\n",
+        "\n",
+        "print (\"train_set_x_flatten shape: \" + str(train_set_x_flatten.shape))\n",
+        "print (\"train_set_y shape: \" + str(train_set_y.shape))\n",
+        "print (\"test_set_x_flatten shape: \" + str(test_set_x_flatten.shape))\n",
+        "print (\"test_set_y shape: \" + str(test_set_y.shape))\n",
+        "print (\"sanity check after reshaping: \" + str(train_set_x_flatten[0:5,0]))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "train_set_x_flatten shape: (12288, 209)\n",
+            "train_set_y shape: (1, 209)\n",
+            "test_set_x_flatten shape: (12288, 50)\n",
+            "test_set_y shape: (1, 50)\n",
+            "sanity check after reshaping: [17 31 56 22 33]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "5eL8DV1xAUgI"
+      },
+      "source": [
+        "train_set_x = train_set_x_flatten/255.\n",
+        "test_set_x = test_set_x_flatten/255."
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "whl5v-1FAUgL"
+      },
+      "source": [
+        "def sigmoid(z):\n",
+        "    \"\"\"\n",
+        "    Compute the sigmoid of z\n",
+        "\n",
+        "    Arguments:\n",
+        "    z -- A scalar or numpy array of any size.\n",
+        "\n",
+        "    Return:\n",
+        "    s -- sigmoid(z)\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    s = (1 / (1 + np.exp(-1 * z)))\n",
+        "    \n",
+        "    return s"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "0bubRYgXAUgO"
+      },
+      "source": [
+        "def initialize_with_zeros(dim):\n",
+        "    \"\"\"\n",
+        "    This function creates a vector of zeros of shape (dim, 1) for w and initializes b to 0.\n",
+        "    \n",
+        "    Argument:\n",
+        "    dim -- size of the w vector we want (or number of parameters in this case)\n",
+        "    \n",
+        "    Returns:\n",
+        "    w -- initialized vector of shape (dim, 1)\n",
+        "    b -- initialized scalar (corresponds to the bias)\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    ### START CODE HERE ### (≈ 1 line of code)\n",
+        "    w = np.zeros((dim, 1))\n",
+        "    b = 0\n",
+        "\n",
+        "    assert(w.shape == (dim, 1))\n",
+        "    assert(isinstance(b, float) or isinstance(b, int))\n",
+        "    \n",
+        "    return w, b"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "5d8pr_ZkNIRo"
+      },
+      "source": [
+        "def propagate(w, b, X, Y):\n",
+        "    \"\"\"\n",
+        "    Implement the cost function and its gradient for the propagation explained above\n",
+        "\n",
+        "    Arguments:\n",
+        "    w -- weights, a numpy array of size (num_px * num_px * 3, 1)\n",
+        "    b -- bias, a scalar\n",
+        "    X -- data of size (num_px * num_px * 3, number of examples)\n",
+        "    Y -- true \"label\" vector (containing 0 if non-cat, 1 if cat) of size (1, number of examples)\n",
+        "    \n",
+        "    Return:\n",
+        "    assert(dw.shape == w.shape)\n",
+        "    assert(db.dtype == float)\n",
+        "    cost = np.squeeze(cost)\n",
+        "    assert(cost.shape == ())\n",
+        "    \n",
+        "    grads = {\"dw\": dw,\n",
+        "             \"db\": db}\n",
+        "    \"\"\"\n",
+        "    m = X.shape[1]\n",
+        "    # FORWARD PROPAGATION (FROM X TO COST)\n",
+        "    A = sigmoid(np.dot(w.T, X) + b)                      # compute activation\n",
+        "    cost = -1 / m * (np.matmul(Y, np.log(A).T) + np.matmul((1-Y), np.log(1 - A).T))   # compute cost\n",
+        "    \n",
+        "    # BACKWARD PROPAGATION (TO FIND GRAD)\n",
+        "    dw = 1 / m * np.dot(X, (A-Y).T)\n",
+        "    db = 1 / m * np.sum(A-Y)\n",
+        "\n",
+        "    assert(dw.shape == w.shape)\n",
+        "    assert(db.dtype == float)\n",
+        "    cost = np.squeeze(cost)\n",
+        "    assert(cost.shape == ())\n",
+        "    \n",
+        "    grads = {\"dw\": dw,\n",
+        "             \"db\": db}\n",
+        "\n",
+        "    return grads, cost"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "SSwOiaSpAUgU"
+      },
+      "source": [
+        "def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):\n",
+        "    \"\"\"\n",
+        "    This function optimizes w and b by running a gradient descent algorithm\n",
+        "    \n",
+        "    Arguments:\n",
+        "    w -- weights, a numpy array of size (num_px * num_px * 3, 1)\n",
+        "    b -- bias, a scalar\n",
+        "    X -- data of shape (num_px * num_px * 3, number of examples)\n",
+        "    Y -- true \"label\" vector (containing 0 if non-cat, 1 if cat), of shape (1, number of examples)\n",
+        "    num_iterations -- number of iterations of the optimization loop\n",
+        "    learning_rate -- learning rate of the gradient descent update rule\n",
+        "    print_cost -- True to print the loss every 100 steps\n",
+        "    \n",
+        "    Returns:\n",
+        "    params -- dictionary containing the weights w and bias b\n",
+        "    grads -- dictionary containing the gradients of the weights and bias with respect to the cost function\n",
+        "    costs -- list of all the costs computed during the optimization, this will be used to plot the learning curve.\n",
+        "    \n",
+        "    Tips:\n",
+        "    You basically need to write down two steps and iterate through them:\n",
+        "        1) Calculate the cost and the gradient for the current parameters. Use propagate().\n",
+        "        2) Update the parameters using gradient descent rule for w and b.\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    costs = []\n",
+        "    \n",
+        "    for i in range(num_iterations):\n",
+        "        \n",
+        "        \n",
+        "        # Cost and gradient calculation\n",
+        "        grads, cost = propagate(w, b, X, Y)\n",
+        "        \n",
+        "        # Retrieve derivatives from grads\n",
+        "        dw = grads[\"dw\"]\n",
+        "        db = grads[\"db\"]\n",
+        "        \n",
+        "        # update rule\n",
+        "        w = w - (learning_rate * dw)\n",
+        "        b = b - (learning_rate * db)\n",
+        "        \n",
+        "        # Record the costs\n",
+        "        if i % 100 == 0:\n",
+        "            costs.append(cost)\n",
+        "        \n",
+        "        # Print the cost every 100 training examples\n",
+        "        if print_cost and i % 100 == 0:\n",
+        "            print (\"Cost after iteration %i: %f\" %(i, cost))\n",
+        "    \n",
+        "    params = {\"w\": w,\n",
+        "              \"b\": b}\n",
+        "    \n",
+        "    grads = {\"dw\": dw,\n",
+        "             \"db\": db}\n",
+        "    \n",
+        "    return params, grads, costs"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "7rg-pAz0AUgW"
+      },
+      "source": [
+        "def predict(w, b, X):\n",
+        "    '''\n",
+        "    Predict whether the label is 0 or 1 using learned logistic regression parameters (w, b)\n",
+        "    \n",
+        "    Arguments:\n",
+        "    w -- weights, a numpy array of size (num_px * num_px * 3, 1)\n",
+        "    b -- bias, a scalar\n",
+        "    X -- data of size (num_px * num_px * 3, number of examples)\n",
+        "    \n",
+        "    Returns:\n",
+        "    Y_prediction -- a numpy array (vector) containing all predictions (0/1) for the examples in X\n",
+        "    '''\n",
+        "    \n",
+        "    m = X.shape[1]\n",
+        "    Y_prediction = np.zeros((1,m))\n",
+        "    w = w.reshape(X.shape[0], 1)\n",
+        "    \n",
+        "    # Compute vector \"A\" predicting the probabilities of a cat being present in the picture\n",
+        "    A = sigmoid(np.dot(w.T, X) + b)\n",
+        "    \n",
+        "    for i in range(A.shape[1]):\n",
+        "        \n",
+        "        # Convert probabilities A[0,i] to actual predictions p[0,i]\n",
+        "        if(A[0, i] > 0.5):\n",
+        "          Y_prediction[0,i] = 1\n",
+        "        else:\n",
+        "          Y_prediction[0,i] = 0\n",
+        "    \n",
+        "    assert(Y_prediction.shape == (1, m))\n",
+        "    \n",
+        "    return Y_prediction"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sVpJ7MaXAUgZ"
+      },
+      "source": [
+        "def model(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate = 0.05, print_cost = False):\n",
+        "    \"\"\"\n",
+        "    Builds the logistic regression model by calling the function you've implemented previously\n",
+        "    \n",
+        "    Arguments:\n",
+        "    X_train -- training set represented by a numpy array of shape (num_px * num_px * 3, m_train)\n",
+        "    Y_train -- training labels represented by a numpy array (vector) of shape (1, m_train)\n",
+        "    X_test -- test set represented by a numpy array of shape (num_px * num_px * 3, m_test)\n",
+        "    Y_test -- test labels represented by a numpy array (vector) of shape (1, m_test)\n",
+        "    num_iterations -- hyperparameter representing the number of iterations to optimize the parameters\n",
+        "    learning_rate -- hyperparameter representing the learning rate used in the update rule of optimize()\n",
+        "    print_cost -- Set to true to print the cost every 100 iterations\n",
+        "    \n",
+        "    Returns:\n",
+        "    d -- dictionary containing information about the model.\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    # initialize parameters with zeros\n",
+        "    w, b = initialize_with_zeros(X_train.shape[0])\n",
+        "\n",
+        "    # Gradient descent\n",
+        "    parameters, grads, costs = optimize(w, b, X_train, Y_train, num_iterations, learning_rate, print_cost)\n",
+        "    \n",
+        "    # Retrieve parameters w and b from dictionary \"parameters\"\n",
+        "    w = parameters[\"w\"]\n",
+        "    b = parameters[\"b\"]\n",
+        "    \n",
+        "    # Predict test/train set examples\n",
+        "    Y_prediction_test = predict(w, b, X_test)\n",
+        "    Y_prediction_train = predict(w, b, X_train)\n",
+        "\n",
+        "    # Print train/test Errors\n",
+        "    print(\"train accuracy: {} %\".format(100 - np.mean(np.abs(Y_prediction_train - Y_train)) * 100))\n",
+        "    print(\"test accuracy: {} %\".format(100 - np.mean(np.abs(Y_prediction_test - Y_test)) * 100))\n",
+        "\n",
+        "    \n",
+        "    d = {\"costs\": costs,\n",
+        "         \"Y_prediction_test\": Y_prediction_test, \n",
+        "         \"Y_prediction_train\" : Y_prediction_train, \n",
+        "         \"w\" : w, \n",
+        "         \"b\" : b,\n",
+        "         \"learning_rate\" : learning_rate,\n",
+        "         \"num_iterations\": num_iterations}\n",
+        "    \n",
+        "    return d"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "XK8ZKvNPAUga",
+        "outputId": "8597c89d-3db9-4fe8-f410-a7da95e56d2f",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 391
+        }
+      },
+      "source": [
+        "d = model(train_set_x, train_set_y, test_set_x, test_set_y, num_iterations = 2000, learning_rate = 0.005, print_cost = True)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Cost after iteration 0: 0.693147\n",
+            "Cost after iteration 100: 0.584508\n",
+            "Cost after iteration 200: 0.466949\n",
+            "Cost after iteration 300: 0.376007\n",
+            "Cost after iteration 400: 0.331463\n",
+            "Cost after iteration 500: 0.303273\n",
+            "Cost after iteration 600: 0.279880\n",
+            "Cost after iteration 700: 0.260042\n",
+            "Cost after iteration 800: 0.242941\n",
+            "Cost after iteration 900: 0.228004\n",
+            "Cost after iteration 1000: 0.214820\n",
+            "Cost after iteration 1100: 0.203078\n",
+            "Cost after iteration 1200: 0.192544\n",
+            "Cost after iteration 1300: 0.183033\n",
+            "Cost after iteration 1400: 0.174399\n",
+            "Cost after iteration 1500: 0.166521\n",
+            "Cost after iteration 1600: 0.159305\n",
+            "Cost after iteration 1700: 0.152667\n",
+            "Cost after iteration 1800: 0.146542\n",
+            "Cost after iteration 1900: 0.140872\n",
+            "train accuracy: 99.04306220095694 %\n",
+            "test accuracy: 70.0 %\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "pMFCAt5oAUgc",
+        "outputId": "307bf74e-0f0f-425e-99ae-126c9ac5eadc",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 449
+        }
+      },
+      "source": [
+        "# Example of a picture that was wrongly classified.\n",
+        "index = 1\n",
+        "plt.imshow(test_set_x[:,index].reshape((num_px, num_px, 3)))\n",
+        "print (\"y = \" + str(test_set_y[0,index]) + \", you predicted that it is a \\\"\" + classes[d[\"Y_prediction_test\"][0,index]].decode(\"utf-8\") +  \"\\\" picture.\")"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "IndexError",
+          "evalue": "ignored",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mIndexError\u001b[0m                                Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-15-50a2ff1ec91d>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0mindex\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0mplt\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mimshow\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtest_set_x\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mreshape\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnum_px\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mnum_px\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m3\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 4\u001b[0;31m \u001b[0mprint\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0;34m\"y = \"\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0mstr\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtest_set_y\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m\", you predicted that it is a \\\"\"\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0mclasses\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0md\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"Y_prediction_test\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdecode\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"utf-8\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m+\u001b[0m  \u001b[0;34m\"\\\" picture.\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+            "\u001b[0;31mIndexError\u001b[0m: only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "image/png": "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\n",
+            "text/plain": [
+              "<Figure size 432x288 with 1 Axes>"
+            ]
+          },
+          "metadata": {
+            "tags": [],
+            "needs_background": "light"
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "otqVK6SuAUgd"
+      },
+      "source": [
+        "# Plot learning curve (with costs)\n",
+        "costs = np.squeeze(d['costs'])\n",
+        "plt.plot(costs)\n",
+        "plt.ylabel('cost')\n",
+        "plt.xlabel('iterations (per hundreds)')\n",
+        "plt.title(\"Learning rate =\" + str(d[\"learning_rate\"]))\n",
+        "plt.show()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sSyR62pQAUge"
+      },
+      "source": [
+        "learning_rates = [0.01, 0.001, 0.0001]\n",
+        "models = {}\n",
+        "for i in learning_rates:\n",
+        "    print (\"learning rate is: \" + str(i))\n",
+        "    models[str(i)] = model(train_set_x, train_set_y, test_set_x, test_set_y, num_iterations = 1500, learning_rate = i, print_cost = False)\n",
+        "    print ('\\n' + \"-------------------------------------------------------\" + '\\n')\n",
+        "\n",
+        "for i in learning_rates:\n",
+        "    plt.plot(np.squeeze(models[str(i)][\"costs\"]), label= str(models[str(i)][\"learning_rate\"]))\n",
+        "\n",
+        "plt.ylabel('cost')\n",
+        "plt.xlabel('iterations')\n",
+        "\n",
+        "legend = plt.legend(loc='upper center', shadow=True)\n",
+        "frame = legend.get_frame()\n",
+        "frame.set_facecolor('0.90')\n",
+        "plt.show()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Io7UQ99aAUgh"
+      },
+      "source": [
+        "Bibliography:\n",
+        "- http://www.wildml.com/2015/09/implementing-a-neural-network-from-scratch/\n",
+        "- https://stats.stackexchange.com/questions/211436/why-do-we-normalize-images-by-subtracting-the-datasets-image-mean-and-not-the-c"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "pshjbmmOCSV4"
+      },
+      "source": [
+        "# Part 1: Testing the Binary Classification Model on the MNIST Dataset"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "YxE9W5vLLqSO",
+        "outputId": "22799aaa-70a1-4ca6-aa1b-b8f780a6bf5d",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 153
+        }
+      },
+      "source": [
+        "#Get required data\n",
+        "from keras.datasets import mnist\n",
+        "(train_images, train_labels), (test_images, test_labels) = mnist.load_data()\n",
+        "\n",
+        "#Reshape and flatten data\n",
+        "X_train = np.asarray(train_images.reshape(train_images.shape[0],-1).T)\n",
+        "X_test = np.asarray(test_images.reshape(test_images.shape[0],-1).T)\n",
+        "\n",
+        "#Create a batch of the corresponding correct labels of size 10,000\n",
+        "Y_train = train_labels\n",
+        "Y_test = test_labels\n",
+        "\n",
+        "print (\"x_train shape: \" + str(X_train.shape))\n",
+        "print (\"y_train shape \" + str(Y_train.shape))\n",
+        "print (\"x_test shape: \" + str(X_test.shape))\n",
+        "print (\"y_test shape: \" + str(Y_test.shape))\n",
+        "\n",
+        "X_train = X_train / 255\n",
+        "X_train = X_train[0:10000]\n",
+        "X_test = X_test/ 255\n",
+        "\n",
+        "#Ensure this subset is a roughly accurate representation of the whole dataset\n",
+        "print(np.asarray(np.unique(Y_train, return_counts=True)))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Downloading data from https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz\n",
+            "11493376/11490434 [==============================] - 0s 0us/step\n",
+            "x_train shape: (784, 60000)\n",
+            "y_train shape (60000,)\n",
+            "x_test shape: (784, 10000)\n",
+            "y_test shape: (10000,)\n",
+            "[[   0    1    2    3    4    5    6    7    8    9]\n",
+            " [5923 6742 5958 6131 5842 5421 5918 6265 5851 5949]]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "OSUCccTG6HNa"
+      },
+      "source": [
+        "#Transition model to represent our binary classifier (1 if odd, 0 if even)\n",
+        "Y_train[Y_train % 2 != 0] = 1\n",
+        "Y_test[Y_test % 2 != 0] = 1\n",
+        "Y_train[Y_train % 2 == 0] = 0\n",
+        "Y_test[Y_test % 2 == 0] = 0"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "qTT-LUVhL7rh",
+        "outputId": "51257e14-188c-4f9b-b015-0f69ac6ff2dc",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 391
+        }
+      },
+      "source": [
+        "#Model using MNIST dataset\n",
+        "d = model(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate = 0.05, print_cost = True)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Cost after iteration 0: 0.693147\n",
+            "Cost after iteration 100: 0.411035\n",
+            "Cost after iteration 200: 0.366434\n",
+            "Cost after iteration 300: 0.342660\n",
+            "Cost after iteration 400: 0.328580\n",
+            "Cost after iteration 500: 0.319049\n",
+            "Cost after iteration 600: 0.312168\n",
+            "Cost after iteration 700: 0.307003\n",
+            "Cost after iteration 800: 0.302994\n",
+            "Cost after iteration 900: 0.299791\n",
+            "Cost after iteration 1000: 0.297170\n",
+            "Cost after iteration 1100: 0.294979\n",
+            "Cost after iteration 1200: 0.293115\n",
+            "Cost after iteration 1300: 0.291506\n",
+            "Cost after iteration 1400: 0.290100\n",
+            "Cost after iteration 1500: 0.288856\n",
+            "Cost after iteration 1600: 0.287746\n",
+            "Cost after iteration 1700: 0.286747\n",
+            "Cost after iteration 1800: 0.285842\n",
+            "Cost after iteration 1900: 0.285018\n",
+            "train accuracy: 88.58166666666666 %\n",
+            "test accuracy: 88.57 %\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "8n7D43UyUcV0",
+        "outputId": "47cc6e9b-6df5-4ebe-a52c-4cc6896e86b7",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 51
+        }
+      },
+      "source": [
+        "#Get predictions from d\n",
+        "(train_images, train_labels), (test_images, test_labels) = mnist.load_data()\n",
+        "Y_prediction_test = np.squeeze(d['Y_prediction_test'])\n",
+        "Y_prediction_train = np.squeeze(d['Y_prediction_train'])\n",
+        "\n",
+        "#Get indicies of incorrect predictions\n",
+        "index_test = np.argwhere(Y_prediction_test != Y_test)\n",
+        "index_train = np.argwhere(Y_prediction_train != Y_train)\n",
+        "\n",
+        "#Get incorrect values from the original MNIST dataset\n",
+        "incorrectTest = np.asarray(np.unique(np.take(test_labels, index_test), return_counts=True))\n",
+        "incorrectTrain = np.asarray(np.unique(np.take(train_labels, index_train), return_counts=True))\n",
+        "\n",
+        "#Print out the number of incorrect labels from each\n",
+        "print(incorrectTest[0])\n",
+        "print(incorrectTest[1] + incorrectTrain[1])"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "[0 1 2 3 4 5 6 7 8 9]\n",
+            "[ 741  136 1018  275 1784  766  213  160 2346  555]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "nYgQMxd8Am7z",
+        "outputId": "43d5420f-2ed7-4dfb-c8fa-cff1d2321d93",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 295
+        }
+      },
+      "source": [
+        "# Plot learning curve (with costs)\n",
+        "costs = np.squeeze(d['costs'])\n",
+        "plt.plot(costs)\n",
+        "plt.ylabel('cost')\n",
+        "plt.xlabel('iterations (per hundreds)')\n",
+        "plt.title(\"Learning rate =\" + str(d[\"learning_rate\"]))\n",
+        "plt.show()"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "image/png": "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\n",
+            "text/plain": [
+              "<Figure size 432x288 with 1 Axes>"
+            ]
+          },
+          "metadata": {
+            "tags": [],
+            "needs_background": "light"
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KANCxdBF8pm6"
+      },
+      "source": [
+        "# Try different learning rates and compare \n",
+        "learning_rates = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]\n",
+        "models = {}\n",
+        "for i in learning_rates:\n",
+        "    print (\"learning rate is: \" + str(i))\n",
+        "    models[str(i)] = model(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate = i, print_cost = False)\n",
+        "    print ('\\n' + \"-------------------------------------------------------\" + '\\n')\n",
+        "\n",
+        "for i in learning_rates:\n",
+        "    plt.plot(np.squeeze(models[str(i)][\"costs\"]), label= str(models[str(i)][\"learning_rate\"]))\n",
+        "\n",
+        "plt.ylabel('cost')\n",
+        "plt.xlabel('iterations')\n",
+        "\n",
+        "legend = plt.legend(loc='upper center', shadow=True)\n",
+        "frame = legend.get_frame()\n",
+        "frame.set_facecolor('0.90')\n",
+        "plt.show()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "taIYtknMIv9L"
+      },
+      "source": [
+        "# Try bigger learning rates and compare \n",
+        "learning_rates = [1, 0.75, 0.5, 0.25]\n",
+        "models = {}\n",
+        "for i in learning_rates:\n",
+        "    print (\"learning rate is: \" + str(i))\n",
+        "    models[str(i)] = model(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate = i, print_cost = False)\n",
+        "    print ('\\n' + \"-------------------------------------------------------\" + '\\n')\n",
+        "\n",
+        "for i in learning_rates:\n",
+        "    plt.plot(np.squeeze(models[str(i)][\"costs\"]), label= str(models[str(i)][\"learning_rate\"]))\n",
+        "\n",
+        "plt.ylabel('cost')\n",
+        "plt.xlabel('iterations')\n",
+        "\n",
+        "legend = plt.legend(loc='upper center', shadow=True)\n",
+        "frame = legend.get_frame()\n",
+        "frame.set_facecolor('0.90')\n",
+        "plt.show()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "PwFlCusoUmqd"
+      },
+      "source": [
+        "# Part 2: Extending the Framework for Multi-Class Classification\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "gBBkzMHEUyN8",
+        "outputId": "0c75267e-0983-4be4-d008-470a517357f9",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 85
+        }
+      },
+      "source": [
+        "#Get required data\n",
+        "from keras.datasets import mnist\n",
+        "(train_images, train_labels), (test_images, test_labels) = mnist.load_data()\n",
+        "\n",
+        "#Reshape and flatten data\n",
+        "X_train = np.asarray(train_images.reshape(train_images.shape[0],-1).T)\n",
+        "X_test = np.asarray(test_images.reshape(test_images.shape[0],-1).T)\n",
+        "\n",
+        "X_train = X_train / 255\n",
+        "X_train = X_train.astype(np.float128)\n",
+        "X_test = X_test/ 255\n",
+        "X_test = X_test.astype(np.float128)\n",
+        "\n",
+        "#Create a Y_train and Y_test from the labels\n",
+        "Y_train = train_labels\n",
+        "Y_test = test_labels\n",
+        "\n",
+        "from keras.utils import to_categorical\n",
+        "Y_train = to_categorical(Y_train)\n",
+        "Y_test = to_categorical(Y_test)\n",
+        "\n",
+        "print (\"x_train shape: \" + str(X_train.shape))\n",
+        "print (\"y_train shape \" + str(Y_train.shape))\n",
+        "print (\"x_test shape: \" + str(X_test.shape))\n",
+        "print (\"y_test shape: \" + str(Y_test.shape))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "x_train shape: (784, 60000)\n",
+            "y_train shape (60000, 10)\n",
+            "x_test shape: (784, 10000)\n",
+            "y_test shape: (10000, 10)\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "k1gFCLJxg9Q7"
+      },
+      "source": [
+        "def softmax(z):\n",
+        "    \"\"\"\n",
+        "    Compute the softmax of z(i)\n",
+        "\n",
+        "    Arguments:\n",
+        "    z -- A scalar or numpy array of any size.\n",
+        "\n",
+        "    Return:\n",
+        "    s -- softmax(z)\n",
+        "    \"\"\"\n",
+        "\n",
+        "    s = np.exp(z)\n",
+        "    return s / np.sum(s, axis = 1, keepdims=True)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sj3DOi-irHc5"
+      },
+      "source": [
+        "def relu(z):\n",
+        "   return np.maximum(0.0,z)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Q4R5aKVzIGFU"
+      },
+      "source": [
+        "def reluPrime(z):\n",
+        "   z[z<=0] = 0\n",
+        "   z[z>0] = 1\n",
+        "   return z"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "GM5AXWgRjHly"
+      },
+      "source": [
+        "def initialize_with_zeros2(dim, numnodes):\n",
+        "    \"\"\"\n",
+        "    This function creates a vector of zeros of shape (dim, 1) for w and initializes b to 0.\n",
+        "    \n",
+        "    Argument:\n",
+        "    dim -- size of the w vector we want (or number of parameters in this case)\n",
+        "    \n",
+        "    Returns:\n",
+        "    w -- initialized vector of shape (dim, 10)\n",
+        "    b -- initialized scalar (corresponds to the bias)\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    w = np.zeros((dim, numnodes))\n",
+        "    w = w.astype(np.float128)\n",
+        "    b = np.zeros((numnodes, 1))\n",
+        "\n",
+        "    \n",
+        "    return w, b"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "hPeeqGolh9b2"
+      },
+      "source": [
+        "def propagate2(w, b, X, Y):\n",
+        "    \"\"\"\n",
+        "    Implement the cost function and its gradient for the propagation\n",
+        "\n",
+        "    Arguments:\n",
+        "    Output Layer:\n",
+        "    w1 -- weights, a numpy array of size (10, 1)\n",
+        "    b1 -- bias, a numpy array of size (1, 10)\n",
+        "    X -- data of size (num_px * num_px * 3, number of examples)\n",
+        "    Y -- true \"label\" vector (containing 0 if non-cat, 1 if cat) of size (1, number of examples)\n",
+        "\n",
+        "    Return:\n",
+        "    cost -- negative log-likelihood cost for logistic regression\n",
+        "    dw -- gradient of the loss with respect to w, thus same shape as w\n",
+        "    db -- gradient of the loss with respect to b, thus same shape as b\n",
+        "    \n",
+        "    Tips:\n",
+        "    - Write your code step by step for the propagation. np.log(), np.dot()\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    m = X.shape[1]\n",
+        "    # FORWARD PROPAGATION (FROM X TO COST)\n",
+        "\n",
+        "    #output layer\n",
+        "    z1 = np.matmul(w.T, X) + b\n",
+        "    a1 = softmax(z1)\n",
+        "    cost = np.sum(-1 / m * (np.matmul(Y, np.log(a1).T) + np.matmul(1-Y, np.log(1 - a1).T)))\n",
+        "    # BACKWARD PROPAGATION (TO FIND GRAD) using Prof Ng's Formulas\n",
+        "    dz = a1 - Y\n",
+        "    dw = 1 / m * np.matmul(X, (dz).T)\n",
+        "    db = 1 / m * np.sum(dz)\n",
+        "\n",
+        "    #assert(dw.shape == w.shape)\n",
+        "    cost = np.squeeze(cost)\n",
+        "    assert(cost.shape == (()))\n",
+        "    \n",
+        "    grads = {\"dw\": dw,\n",
+        "             \"db\": db,}\n",
+        "    \n",
+        "    return grads, cost"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wgYVxE3Vp0d_"
+      },
+      "source": [
+        "def optimize2(w, b, X, Y, num_iterations, learning_rate, print_cost = False):\n",
+        "    \"\"\"\n",
+        "    This function optimizes w1, b1 and w2, b2 by running a gradient descent algorithm\n",
+        "    \n",
+        "    Arguments:\n",
+        "    Output Layer:\n",
+        "    w -- weights, a numpy array of size (num_px * num_px * 3, 10)\n",
+        "    b -- bias, a numpy array of size (1, 10)\n",
+        "\n",
+        "    X -- data of shape (num_px * num_px * 3, number of examples)\n",
+        "    Y -- true \"label\" vector (containing 0 if non-cat, 1 if cat), of shape (1, number of examples)\n",
+        "    num_iterations -- number of iterations of the optimization loop\n",
+        "    learning_rate -- learning rate of the gradient descent update rule\n",
+        "    print_cost -- True to print the loss every 100 steps\n",
+        "    \n",
+        "    Returns:\n",
+        "    params -- dictionary containing the weights w1, w2 and bias b1, b2\n",
+        "    grads -- dictionary containing the gradients of the weights and bias with respect to the cost function\n",
+        "    costs -- list of all the costs computed during the optimization, this will be used to plot the learning curve.\n",
+        "    \n",
+        "    Tips:\n",
+        "    You basically need to write down two steps and iterate through them:\n",
+        "        1) Calculate the cost and the gradient for the current parameters. Use propagate().\n",
+        "        2) Update the parameters using gradient descent rule for w and b.\n",
+        "    \"\"\"\n",
+        "    \n",
+        "    costs = []\n",
+        "    \n",
+        "    for i in range(num_iterations):\n",
+        "        \n",
+        "        \n",
+        "        # Cost and gradient calculation\n",
+        "        grads, cost = propagate2(w, b, X, Y)\n",
+        "        \n",
+        "        # Retrieve derivatives from grads\n",
+        "        dw = grads[\"dw\"]\n",
+        "        db = grads[\"db\"]\n",
+        "\n",
+        "        # update rule\n",
+        "        w = w - (learning_rate * dw)\n",
+        "        b = b - (learning_rate * db)\n",
+        "        \n",
+        "        # Record the costs\n",
+        "        if i % 100 == 0:\n",
+        "            costs.append(cost)\n",
+        "        \n",
+        "        # Print the cost every 100 training examples\n",
+        "        if print_cost and i % 100 == 0:\n",
+        "            print (\"Cost after iteration %i: %f\" %(i, cost))\n",
+        "    \n",
+        "    params = {\"w\": w,\n",
+        "              \"b\": b,}\n",
+        "     \n",
+        "    grads = {\"dw\": dw,\n",
+        "             \"db\": db,}\n",
+        "    \n",
+        "    return params, grads, costs"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "eMGt_P4-KNQ0"
+      },
+      "source": [
+        "def predict2(w, b, X):\n",
+        "    '''\n",
+        "    Predict label using learned logistic regression parameters (w1, b1, w2, b2)\n",
+        "    \n",
+        "    Arguments:\n",
+        "    w -- weights, a numpy array of size (num_px * num_px * 3, 10)\n",
+        "    b -- bias, a numpy array of size (1, 10)\n",
+        "    X -- data of size (num_px * num_px * 3, number of examples)\n",
+        "    \n",
+        "    Returns:\n",
+        "    Y_prediction -- a numpy array (vector) containing all predictions (0/1) for the examples in X\n",
+        "    '''\n",
+        "    \n",
+        "    m = X.shape[1]\n",
+        "    w = w.reshape(X.shape[0], 10)\n",
+        "    Y_prediction = np.zeros((10, m))\n",
+        "\n",
+        "    # Compute vector \"A\" predicting the probabilities of a cat being present in the picture\n",
+        "    z1 = np.dot(w.T, X) + b\n",
+        "    A1 = softmax(z1)\n",
+        "    pred = np.argmax(A1, axis=0)\n",
+        "    for i in range(A1.shape[1]):\n",
+        "      Y_prediction[pred[i], i] = 1\n",
+        "\n",
+        "    return Y_prediction\n",
+        "    #Y_prediction"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "zUNaSszPpJOd"
+      },
+      "source": [
+        "def model2(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate = 0.05, print_cost = False):\n",
+        "    \"\"\"\n",
+        "    Builds the logistic regression model by calling the function you've implemented previously\n",
+        "    \n",
+        "    Arguments:\n",
+        "    X_train -- training set represented by a numpy array of shape (num_px * num_px * 3, m_train)\n",
+        "    Y_train -- training labels represented by a numpy array (vector) of shape (1, m_train)\n",
+        "    X_test -- test set represented by a numpy array of shape (num_px * num_px * 3, m_test)\n",
+        "    Y_test -- test labels represented by a numpy array (vector) of shape (1, m_test)\n",
+        "    num_iterations -- hyperparameter representing the number of iterations to optimize the parameters\n",
+        "    learning_rate -- hyperparameter representing the learning rate used in the update rule of optimize()\n",
+        "    print_cost -- Set to true to print the cost every 100 iterations\n",
+        "    \n",
+        "    Returns:\n",
+        "    d -- dictionary containing information about the model.\n",
+        "    \"\"\"\n",
+        "    # initialize parameters with zeros for hidden layer and output layer\n",
+        "    w, b = initialize_with_zeros2(X_train.shape[0], 10)\n",
+        "\n",
+        "    # Gradient descent\n",
+        "    parameters, grads, costs = optimize2(w, b, X_train, Y_train, num_iterations, learning_rate, print_cost)\n",
+        "    \n",
+        "    # Retrieve parameters w and b from dictionary \"parameters\"\n",
+        "    w = parameters[\"w\"]\n",
+        "    b = parameters[\"b\"]\n",
+        "\n",
+        "    # Predict test/train set examples (≈ 2 lines of code)\n",
+        "    Y_prediction_test = predict2(w, b, X_test)\n",
+        "    Y_prediction_train = predict2(w, b, X_train)\n",
+        "\n",
+        "    ### END CODE HERE ###\n",
+        "\n",
+        "    # Print train/test Errors\n",
+        "\n",
+        "    print(\"train accuracy: {} %\".format(100 - np.mean(np.abs(Y_prediction_train - Y_train)) * 100))\n",
+        "    print(\"test accuracy: {} %\".format(100 - np.mean(np.abs(Y_prediction_test - Y_test)) * 100))\n",
+        "\n",
+        "    \n",
+        "    d = {\"costs\": costs,\n",
+        "         \"Y_prediction_test\": Y_prediction_test, \n",
+        "         \"Y_prediction_train\" : Y_prediction_train, \n",
+        "         \"w\" : w, \n",
+        "         \"b\" : b,\n",
+        "         \"learning_rate\" : learning_rate,\n",
+        "         \"num_iterations\": num_iterations}\n",
+        "    \n",
+        "    return d"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "GXdEj5eFM4fx",
+        "outputId": "93e0559e-dd94-4eb8-ee5b-297e7c187147",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 68
+        }
+      },
+      "source": [
+        "#Model using MNIST dataset\n",
+        "d = model2(X_train, Y_train.T, X_test, Y_test.T, num_iterations = 25, learning_rate = 0.05, print_cost = True)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Cost after iteration 0: 110.022498\n",
+            "train accuracy: 92.84866666666667 %\n",
+            "test accuracy: 92.584 %\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    }
+  ]
+}
